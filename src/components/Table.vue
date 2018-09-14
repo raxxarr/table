@@ -9,15 +9,15 @@
             <table class="table table-head" ref="tableHead">
                 <thead>
                     <tr>
-                        <th v-for="key in headKeys" :key="key"><span ref="tableHeadTh" class="table-head-cell">{{ key }}</span></th>
+                        <th v-for="(key, index) in headKeys" :key="key" :class="{ 'invisible': index === 0 }"><span ref="tableHeadTh" class="table-head-cell">{{ key }}</span></th>
                     </tr>
                 </thead>
                 <!-- placeholder -->
-                <tbody>
+                <!-- <tbody>
                     <tr>
                         <td v-for="(val, key) in tableData[0]" :key="key"><span class="placeholder-cell">{{ val }}</span></td>
                     </tr>
-                </tbody>
+                </tbody> -->
             </table>
             <!-- fixed column -->
             <table class="table table-column" ref="tableColumn">
@@ -27,7 +27,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="row in tableData" :key="row.id" ref="tableColumnTr">
+                    <tr v-for="row in tableData" :key="row._id" ref="tableColumnTr">
                         <td>{{ row[headKeys[0]] }}</td>
                     </tr>
                 </tbody>
@@ -41,9 +41,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="row in tableData" :key="row.id" ref="tableMainTr">
-                            <!-- { id: 0, A: 1 } -->
-                            <td v-for="(val, key) in row" :key="key">{{ val }}</td>
+                        <tr v-for="row in tableData" :key="row._id" ref="tableMainTr">
+                            <!-- { _id: 0, A: 1 } -->
+                            <td v-for="(val, key) in row" :key="key" :class="{ 'invisible': key === '_id' }">{{ val }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -75,6 +75,7 @@ export default {
             count: 100,
             headCount: 100,
             dialogVisible: false,
+            busy: false,
             tableData: []
         }
     },
@@ -88,12 +89,20 @@ export default {
     methods: {
         contentScroll (e) {
             if (!this.tableMain) { return }
+            // if (this.busy) { return }
+            // this.busy = true
+
             const FIX = 3
 
+            // window.requestAnimationFrame(() => {
             const pos = this.tableMain.getBoundingClientRect()
             const top = pos.top + FIX <= 0 ? pos.top + FIX : 0
-            this.tableColumn.style.top = top + 'px'
-            this.tableHead.style.left = pos.left + 'px'
+            // this.tableColumn.style.top = top + 'px'
+            // this.tableHead.style.left = pos.left + 'px'
+            this.tableColumn.style.transform = 'translate3d(0,' + top + 'px,0)'
+            this.tableHead.style.transform = 'translate3d(' + pos.left + 'px,0,0)'
+            this.busy = false
+            // })
         },
 
         computeRowHeight () {
@@ -124,7 +133,7 @@ export default {
             const res = []
             for (let i = 0; i < count; i++) {
                 let obj = {}
-                obj.id = i
+                obj._id = i
                 for (let _i = 0; _i < headCount; _i++) {
                     const prefix = alphabet[parseInt(_i / 26) - 1] || ''
                     const main = alphabet[_i % 26]
@@ -183,6 +192,14 @@ export default {
 </script>
 <style lang="less" scoped>
 @borderColor: #ddd;
+@zIndexHead: 10;
+@zIndexColumn: 10;
+@zIndexMask: 11;
+
+.invisible {
+    visibility: hidden;
+}
+
 .table-page {
     overflow: hidden;
     height: 100%;
@@ -208,6 +225,7 @@ export default {
 // ------- fixed head -------
 
 .table-head {
+    z-index: @zIndexHead;
     position: relative;
 
     tbody {
@@ -244,6 +262,7 @@ export default {
 // ------- fixed column -------
 
 .table-column {
+    z-index: @zIndexColumn;
     position: absolute;
     top: 0;
     left: 0;
@@ -263,18 +282,20 @@ export default {
 
 .table-main-wrap {
     // head table 的隐藏行高度为 30px；main table 隐藏行的高度为 30px;
-    margin-top: -60px;
+    margin-top: -30px;
     height: 100%;
     overflow-x: auto;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .table-main {
     // header table 隐藏行的上下 border, main table 隐藏行的上下 border
     margin-top: -5px;
 
-    table-main-placeholder-tr {
+    .table-main-placeholder-tr {
         overflow: hidden;
+        visibility: hidden;
     }
 
     .table-main-placeholder-cell {
@@ -288,12 +309,12 @@ export default {
 // ------- fixed mask -------
 
 .table-mask {
+    z-index: @zIndexMask;
     position: absolute;
     top: 0;
     left: 0;
     height: 31px;
     background: #eee;
-    z-index: 10;
 
     td {
         padding: 0;
